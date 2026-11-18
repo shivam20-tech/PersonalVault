@@ -259,6 +259,22 @@ body {
 }
 
 /* ─────────────────────────────────────────────
+   Hide Netlify Drawer / Injected Badges
+───────────────────────────────────────────── */
+#netlify-identity-widget,
+[data-netlify-drawer],
+iframe[id^="netlify-"],
+.netlify-badge,
+.netlify-drawer-container {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* ─────────────────────────────────────────────
    Selection
 ───────────────────────────────────────────── */
 ::selection { background: rgba(91,127,255,0.3); color: inherit; }

@@ -2,6 +2,10 @@
   command = "npm run build"
   publish = "dist"
 
+# Disable Netlify drawer & snippet injection
+[build.processing]
+  skip_processing = true
+
 # SPA redirect — all routes serve index.html
 [[redirects]]
   from = "/*"
