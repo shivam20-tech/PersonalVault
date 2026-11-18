@@ -100,9 +100,10 @@ function FileCard({ file, token, folderMap, index, onImageClick, onPDFClick, onA
   const [imgLoading, setImgLoading] = useState(false)
   const [hovered, setHovered]       = useState(false)
   const category = getFileCategory(file.mimeType)
-  const isImage  = category === 'image'
-  const isPDF    = category === 'pdf'
-  const tags     = parseTags(file.description)
+  const isImage   = category === 'image'
+  const isPDF     = category === 'pdf'
+  const isVideo   = category === 'video'
+  const tags      = parseTags(file.description)
   const { Icon, cls, label } = FILE_TYPE_MAP[category] || FILE_TYPE_MAP.other
   const isArchive = file.parents?.includes(folderMap['Archive'])
 
@@ -117,7 +118,7 @@ function FileCard({ file, token, folderMap, index, onImageClick, onPDFClick, onA
   }, [file.id, isImage, token])
 
   const handleClick = () => {
-    if (isImage) onImageClick(file)
+    if (isImage || isVideo) onImageClick(file)
     else if (isPDF) onPDFClick(file)
   }
 
@@ -153,12 +154,12 @@ function FileCard({ file, token, folderMap, index, onImageClick, onPDFClick, onA
         )}
 
         {/* Hover overlay for clickable files */}
-        {(isImage || isPDF) && (
+        {(isImage || isPDF || isVideo) && (
           <div className="absolute inset-0 flex items-center justify-center transition-opacity duration-150"
             style={{ opacity: hovered ? 1 : 0, background: 'rgba(0,0,0,0.5)' }}>
             <span className="text-white text-xs font-medium px-2.5 py-1 rounded-full"
               style={{ background: 'rgba(91,127,255,0.8)', backdropFilter: 'blur(8px)' }}>
-              {isImage ? 'View' : 'Preview'}
+              {isImage ? 'View' : isVideo ? '▶ Play' : 'Preview'}
             </span>
           </div>
         )}

@@ -157,20 +157,68 @@ export async function uploadFile(token, file, folderId, tags = '', notes = '', o
     appProperties: { notes, uploadedBy: 'PersonalVaultApp' },
   }
 
-  // Build multipart body
-  const boundary = 'vault_boundary_' + Date.now()
-  const metaPart = JSON.stringify(metadata)
+  // For small files (<= 5 MB), multipart upload is fast and single-request
+  if (file.size <= 5 * 1024 * 1024) {
+    const metaPart = JSON.stringify(metadata)
 
-  // We use XMLHttpRequest for real upload progress
+    return new Promise((resolve, reject) => {
+      const formData = new FormData()
+      formData.append('metadata', new Blob([metaPart], { type: 'application/json' }))
+      formData.append('file', file)
+
+      const xhr = new XMLHttpRequest()
+      xhr.open('POST', `${UPLOAD_API}/files?uploadType=multipart&fields=id,name,mimeType,size,createdTime,description,appProperties`)
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable && onProgress) {
+          onProgress(Math.round((e.loaded / e.total) * 100))
+        }
+      })
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try { resolve(JSON.parse(xhr.responseText)) }
+          catch (e) { reject(new Error('Failed to parse upload response')) }
+        } else {
+          let msg = `Upload failed: ${xhr.status}`
+          try { msg = JSON.parse(xhr.responseText)?.error?.message || msg } catch (_) {}
+          reject(new Error(msg))
+        }
+      })
+
+      xhr.addEventListener('error', () => reject(new Error('Network error during upload')))
+      xhr.addEventListener('abort', () => reject(new Error('Upload aborted')))
+
+      xhr.send(formData)
+    })
+  }
+
+  // For larger files (> 5 MB, e.g. videos, large PDFs, media), use Google Drive resumable upload
+  const initRes = await fetch(`${UPLOAD_API}/files?uploadType=resumable&fields=id,name,mimeType,size,createdTime,description,appProperties`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json; charset=UTF-8',
+      'X-Upload-Content-Type': file.type || 'application/octet-stream',
+      'X-Upload-Content-Length': file.size.toString(),
+    },
+    body: JSON.stringify(metadata),
+  })
+
+  if (!initRes.ok) {
+    let msg = `Failed to start upload: ${initRes.status}`
+    try { msg = (await initRes.json())?.error?.message || msg } catch (_) {}
+    throw new Error(msg)
+  }
+
+  const uploadUrl = initRes.headers.get('Location')
+  if (!uploadUrl) throw new Error('Google Drive did not provide upload URL')
+
   return new Promise((resolve, reject) => {
-    const formData = new FormData()
-    formData.append('metadata', new Blob([metaPart], { type: 'application/json' }))
-    formData.append('file', file)
-
     const xhr = new XMLHttpRequest()
-    xhr.open('POST', `${UPLOAD_API}/files?uploadType=multipart&fields=id,name,mimeType,size,createdTime,description,appProperties`)
-
-    xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+    xhr.open('PUT', uploadUrl)
+    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream')
 
     xhr.upload.addEventListener('progress', (e) => {
       if (e.lengthComputable && onProgress) {
@@ -192,7 +240,7 @@ export async function uploadFile(token, file, folderId, tags = '', notes = '', o
     xhr.addEventListener('error', () => reject(new Error('Network error during upload')))
     xhr.addEventListener('abort', () => reject(new Error('Upload aborted')))
 
-    xhr.send(formData)
+    xhr.send(file)
   })
 }
 

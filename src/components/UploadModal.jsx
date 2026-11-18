@@ -4,7 +4,7 @@ import { DEFAULT_SUBFOLDERS } from '../lib/driveApi'
 import { formatBytes } from '../lib/utils'
 import { IconClose, IconUpload, IconTag, IconCheck } from './Icons'
 
-const ACCEPT = 'image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.heic'
+const ACCEPT = 'image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.heic,.mp4,.mov,.mkv,.webm,.avi,.m4v,.3gp'
 
 export default function UploadModal({ token, folderMap, defaultFolder, onClose, onComplete }) {
   const [files, setFiles]       = useState([])
@@ -99,7 +99,7 @@ export default function UploadModal({ token, folderMap, defaultFolder, onClose, 
                 </div>
                 <div className="text-center">
                   <p className="text-sm font-medium text-vault-subtle">Drop files or tap to browse</p>
-                  <p className="text-xs text-vault-muted mt-0.5">Images, PDFs, documents…</p>
+                  <p className="text-xs text-vault-muted mt-0.5">Images, videos, PDFs, documents…</p>
                 </div>
                 <input ref={inputRef} type="file" multiple accept={ACCEPT} className="hidden"
                   onChange={e => addFiles(e.target.files)} />

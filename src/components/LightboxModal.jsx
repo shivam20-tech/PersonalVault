@@ -13,6 +13,7 @@ export default function LightboxModal({ token, file, folderMap, onClose, onArchi
   const [noteInput, setNoteInput]   = useState(file?.appProperties?.notes || '')
   const [saving, setSaving]         = useState(false)
   const [saved, setSaved]           = useState(false)
+  const isVideo = file?.mimeType?.startsWith('video/')
   const isPanning = useRef(false)
   const lastPos = useRef({ x: 0, y: 0 })
 
@@ -75,39 +76,49 @@ export default function LightboxModal({ token, file, folderMap, onClose, onArchi
       </button>
 
       {/* Zoom indicator */}
-      {zoom !== 1 && (
+      {!isVideo && zoom !== 1 && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 px-3 py-1.5 rounded-full text-xs text-white font-mono"
           style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(8px)' }}>
           {Math.round(zoom * 100)}%
         </div>
       )}
 
-      {/* Image area */}
+      {/* Image or Video area */}
       <div
-        className={`flex-1 flex items-center justify-center overflow-hidden ${zoom > 1 ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
-        onWheel={handleWheel}
-        onDoubleClick={handleDblClick}
+        className={`flex-1 flex items-center justify-center overflow-hidden p-4 ${!isVideo && zoom > 1 ? 'cursor-zoom-out' : !isVideo ? 'cursor-zoom-in' : ''}`}
+        onWheel={!isVideo ? handleWheel : undefined}
+        onDoubleClick={!isVideo ? handleDblClick : undefined}
       >
         {loading && (
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 rounded-full border-2 border-vault-border border-t-vault-accent animate-spin" />
-            <p className="text-xs text-vault-muted">Loading…</p>
+            <p className="text-xs text-vault-muted">Loading media…</p>
           </div>
         )}
         {blobUrl && (
-          <img
-            src={blobUrl}
-            alt={file.name}
-            draggable={false}
-            style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              objectFit: 'contain',
-              transform: `scale(${zoom}) translate(${panOffset.x}px, ${panOffset.y}px)`,
-              transition: 'transform 0.15s ease',
-              userSelect: 'none',
-            }}
-          />
+          isVideo ? (
+            <video
+              src={blobUrl}
+              controls
+              autoPlay
+              playsInline
+              className="max-w-full max-h-[85vh] rounded-xl shadow-2xl bg-black"
+            />
+          ) : (
+            <img
+              src={blobUrl}
+              alt={file.name}
+              draggable={false}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: 'contain',
+                transform: `scale(${zoom}) translate(${panOffset.x}px, ${panOffset.y}px)`,
+                transition: 'transform 0.15s ease',
+                userSelect: 'none',
+              }}
+            />
+          )
         )}
       </div>
 
@@ -164,19 +175,21 @@ export default function LightboxModal({ token, file, folderMap, onClose, onArchi
           )}
         </div>
 
-        {/* Zoom controls */}
-        <div className="p-4 border-b border-vault-border">
-          <span className="section-label block mb-2">Zoom</span>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setZoom(z => Math.max(0.5, z - 0.5))} className="btn-ghost flex-1 justify-center text-xs py-1.5">
-              <IconZoomOut className="w-3.5 h-3.5" />
-            </button>
-            <span className="text-xs text-vault-faint font-mono w-10 text-center">{Math.round(zoom * 100)}%</span>
-            <button onClick={() => setZoom(z => Math.min(4, z + 0.5))} className="btn-ghost flex-1 justify-center text-xs py-1.5">
-              <IconZoomIn className="w-3.5 h-3.5" />
-            </button>
+        {/* Zoom controls (images only) */}
+        {!isVideo && (
+          <div className="p-4 border-b border-vault-border">
+            <span className="section-label block mb-2">Zoom</span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setZoom(z => Math.max(0.5, z - 0.5))} className="btn-ghost flex-1 justify-center text-xs py-1.5">
+                <IconZoomOut className="w-3.5 h-3.5" />
+              </button>
+              <span className="text-xs text-vault-faint font-mono w-10 text-center">{Math.round(zoom * 100)}%</span>
+              <button onClick={() => setZoom(z => Math.min(4, z + 0.5))} className="btn-ghost flex-1 justify-center text-xs py-1.5">
+                <IconZoomIn className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Actions */}
         <div className="p-4 space-y-1.5 mt-auto">
