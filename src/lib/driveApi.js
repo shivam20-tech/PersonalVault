@@ -73,22 +73,16 @@ export async function createFolder(token, name, parentId = null) {
 }
 
 /**
- * Ensure the root vault folder and all 4 default subfolders exist.
+ * Ensure the root vault folder and default subfolders exist,
+ * and load all subfolders (including user-created ones).
  * Returns { rootId, folderMap: { 'Folder Name': id, ... } }
- * Results are cached in localStorage to minimise API calls.
  */
 export async function initVaultFolders(token) {
-  const cacheKey = 'vault_folder_ids'
-  const cached = localStorage.getItem(cacheKey)
-  if (cached) {
-    try { return JSON.parse(cached) } catch (_) {}
-  }
-
   // 1. Find or create root folder
   let root = await findFolder(token, ROOT_FOLDER_NAME)
   if (!root) root = await createFolder(token, ROOT_FOLDER_NAME)
 
-  // 2. Find or create each subfolder
+  // 2. Ensure each default subfolder exists
   const folderMap = {}
   for (const name of DEFAULT_SUBFOLDERS) {
     let folder = await findFolder(token, name, root.id)
@@ -96,9 +90,36 @@ export async function initVaultFolders(token) {
     folderMap[name] = folder.id
   }
 
+  // 3. Fetch any additional custom folders created by the user
+  const subfolders = await fetchSubfolders(token, root.id)
+  for (const f of subfolders) {
+    folderMap[f.name] = f.id
+  }
+
   const result = { rootId: root.id, folderMap }
-  localStorage.setItem(cacheKey, JSON.stringify(result))
+  localStorage.setItem('vault_folder_ids', JSON.stringify(result))
   return result
+}
+
+/**
+ * Fetch all subfolders inside the root vault folder.
+ */
+export async function fetchSubfolders(token, rootId) {
+  const q = `'${rootId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`
+  const url = `${DRIVE_API}/files?q=${encodeURIComponent(q)}&fields=files(id,name)&orderBy=name`
+  const res = await fetch(url, { headers: authHeader(token) })
+  await checkResponse(res)
+  const data = await res.json()
+  return data.files || []
+}
+
+/**
+ * Create a new custom folder inside the root vault.
+ */
+export async function createCustomFolder(token, name, rootId) {
+  const folder = await createFolder(token, name, rootId)
+  clearFolderCache()
+  return folder
 }
 
 /** Clear cached folder IDs (used on sign-out) */
@@ -148,13 +169,13 @@ export async function listAllVaultFiles(token, folderIds) {
  * @param {Function} onProgress  Called with progress 0-100
  * @returns {Object} Uploaded file metadata
  */
-export async function uploadFile(token, file, folderId, tags = '', notes = '', onProgress) {
+export async function uploadFile(token, file, folderId, tags = '', notes = '', onProgress, extraProperties = {}) {
   // Metadata
   const metadata = {
     name: file.name,
     parents: [folderId],
     description: tags,
-    appProperties: { notes, uploadedBy: 'PersonalVaultApp' },
+    appProperties: { notes, uploadedBy: 'PersonalVaultApp', ...extraProperties },
   }
 
   // For small files (<= 5 MB), multipart upload is fast and single-request
@@ -251,12 +272,19 @@ export async function uploadFile(token, file, folderId, tags = '', notes = '', o
  * Returns an Object URL you can assign to <img src> or <iframe src>.
  */
 export async function fetchFileBlob(token, fileId) {
+  const blob = await fetchRawBlob(token, fileId)
+  return URL.createObjectURL(blob)
+}
+
+/**
+ * Fetch raw binary Blob from Google Drive.
+ */
+export async function fetchRawBlob(token, fileId) {
   const res = await fetch(`${DRIVE_API}/files/${fileId}?alt=media`, {
     headers: authHeader(token),
   })
   await checkResponse(res)
-  const blob = await res.blob()
-  return URL.createObjectURL(blob)
+  return res.blob()
 }
 
 // ─── File Metadata Update ────────────────────────────────────────────────────

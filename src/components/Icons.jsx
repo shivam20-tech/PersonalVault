@@ -283,3 +283,28 @@ export function IconCheck({ className = 'w-4 h-4' }) {
     </svg>
   )
 }
+
+export function IconFolder({ className = 'w-4 h-4' }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2.5 5.5A1.5 1.5 0 0 1 4 4h3.5l2 2H16A1.5 1.5 0 0 1 17.5 7.5v7A1.5 1.5 0 0 1 16 16H4a1.5 1.5 0 0 1-1.5-1.5v-9z"/>
+    </svg>
+  )
+}
+
+export function IconPlus({ className = 'w-4 h-4' }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 4.5v11M4.5 10h11"/>
+    </svg>
+  )
+}
+
+export function IconLock({ className = 'w-4 h-4' }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="8.5" width="12" height="8.5" rx="2"/>
+      <path d="M6.5 8.5V6a3.5 3.5 0 0 1 7 0v2.5"/>
+    </svg>
+  )
+}
